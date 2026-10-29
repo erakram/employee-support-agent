@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Employee Support Agent</title>
+  <style>
+    :root {
+      --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #6b7385;
+      --border: #e2e5eb; --accent: #2f6fed; --accent-text: #ffffff;
+      --user-bg: #2f6fed; --bot-bg: #f0f2f6; --tool-bg: #eef4ff; --tool-text: #2a4f9e; --error: #c0392b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151b; --panel: #1a1e26; --text: #e6e9ef; --muted: #8d95a7;
+        --border: #2a303c; --accent: #5b8cff; --user-bg: #3a63c8; --bot-bg: #232834;
+        --tool-bg: #1f2a40; --tool-text: #9db8f5; --error: #ff7a6b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+           background: var(--bg); color: var(--text); }
+    .app { max-width: 760px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; padding: 16px; }
+    header { padding: 4px 0 12px; }
+    header h1 { margin: 0; font-size: 20px; }
+    header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    #log { flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--border);
+           border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+    .user { align-self: flex-end; background: var(--user-bg); color: var(--accent-text); }
+    .bot { align-self: flex-start; background: var(--bot-bg); }
+    .error { align-self: flex-start; color: var(--error); font-size: 14px; }
+    .tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .tool { background: var(--tool-bg); color: var(--tool-text); font: 12px ui-monospace, monospace;
+            padding: 2px 8px; border-radius: 6px; }
+    .answer p { margin: 0 0 6px; }
+    .answer ul { margin: 0 0 6px; padding-left: 20px; }
+    .answer code { font: 13px ui-monospace, monospace; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .suggestions button { background: var(--panel); color: var(--text); border: 1px solid var(--border);
+                          border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+    .suggestions button:hover { border-color: var(--accent); }
+    form { display: flex; gap: 8px; margin-top: 12px; }
+    input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--panel); color: var(--text); font: inherit; }
+    input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    button[type=submit] { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 10px;
+                          padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: default; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Employee Support Agent</h1>
+      <p>Ask about colleagues, leave balances or HR policies at Northwind Labs (sample data).</p>
+    </header>
+    <div id="log">
+      <div class="msg bot">Hi! I can look up colleagues, check leave balances and explain HR policies. Try one of these:</div>
+      <div class="suggestions">
+        <button>Who is Priya Nair's manager?</button>
+        <button>How many annual leave days does Daniel Reyes have left?</button>
+        <button>What's the remote work policy?</button>
+        <button>Who works in Sales?</button>
+      </div>
+    </div>
+    <form id="form">
+      <input id="input" placeholder="Ask a question…" autocomplete="off" maxlength="2000" required>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+  <script>
+    const log = document.getElementById("log");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const sendBtn = form.querySelector("button");
+    const history = [];
+
+    function add(cls, text) {
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      return div;
+    }
+
+    // Minimal, safe Markdown: escape all HTML first, then add bold, inline code and bullet lists.
+    function renderMarkdown(text) {
+      const escaped = text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+      let html = "", inList = false;
+      for (const line of escaped.split("\n")) {
+        const item = line.match(/^\s*[-*•]\s+(.*)/);
+        if (item) {
+          if (!inList) { html += "<ul>"; inList = true; }
+          html += `<li>${inline(item[1])}</li>`;
+          continue;
+        }
+        if (inList) { html += "</ul>"; inList = false; }
+        if (line.trim()) html += `<p>${inline(line)}</p>`;
+      }
+      return html + (inList ? "</ul>" : "");
+    }
+
+    function describe(call) {
+      const args = Object.entries(call.arguments).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+      return `${call.name}(${args})`;
+    }
+
+    async function send(text) {
+      add("user", text);
+      input.value = "";
+      sendBtn.disabled = true;
+      const thinking = add("bot", "Thinking…");
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history: history.slice(-20) }),
+        });
+        const data = await res.json();
+        thinking.remove();
+        if (!res.ok) {
+          add("error", typeof data.detail === "string" ? data.detail : "Something went wrong.");
+          return;
+        }
+        const bubble = add("bot", "");
+        if (data.tool_calls.length) {
+          const tools = document.createElement("div");
+          tools.className = "tools";
+          for (const call of data.tool_calls) {
+            const chip = document.createElement("span");
+            chip.className = "tool";
+            chip.textContent = "🔧 " + describe(call);
+            tools.appendChild(chip);
+          }
+          bubble.appendChild(tools);
+        }
+        const answer = document.createElement("div");
+        answer.className = "answer";
+        answer.innerHTML = renderMarkdown(data.answer);
+        bubble.appendChild(answer);
+        bubble.style.whiteSpace = "normal";
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = `${data.latency_ms} ms`;
+        bubble.appendChild(meta);
+        history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
+      } catch {
+        thinking.remove();
+        add("error", "Could not reach the server.");
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    form.addEventListener("submit", (e) => { e.preventDefault(); if (input.value.trim()) send(input.value.trim()); });
+    document.querySelectorAll(".suggestions button").forEach((b) => b.addEventListener("click", () => send(b.textContent)));
+  </script>
+</body>
+</html>
