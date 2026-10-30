@@ -48,6 +48,9 @@
     button[type=submit] { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 10px;
                           padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer; }
     button:disabled { opacity: .6; cursor: default; }
+    footer { text-align: center; font-size: 13px; color: var(--muted); padding-top: 10px; }
+    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -69,6 +72,10 @@
       <input id="input" placeholder="Ask a question…" autocomplete="off" maxlength="2000" required>
       <button type="submit">Send</button>
     </form>
+    <footer>
+      Built by <a href="https://www.linkedin.com/in/er-mohammad-akram/" target="_blank" rel="noopener">Mohammad Akram</a>
+      · <a href="https://github.com/erakram/employee-support-agent" target="_blank" rel="noopener">GitHub</a>
+    </footer>
   </div>
   <script>
     const log = document.getElementById("log");
