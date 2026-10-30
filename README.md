@@ -2,6 +2,9 @@
 
 ![tests](https://github.com/erakram/employee-support-agent/actions/workflows/tests.yml/badge.svg)
 
+**▶ Live demo: [employee-support-agent.onrender.com](https://employee-support-agent.onrender.com/)**
+*(free hosting: the first visit after a quiet period takes about a minute to wake up)*
+
 An AI agent that answers employee questions — "Who is Priya's manager?", "How much leave do I have left?", "What's the remote work policy?" — by calling tools that query a company database, instead of guessing.
 
 Built with **Groq** (LLM function calling), **SQLite**, and **FastAPI**, with caching, retries, timeouts, structured logging, and tests.
