@@ -21,7 +21,7 @@ from app.tools import TOOL_SCHEMAS, ToolExecutor
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are the internal employee support assistant for Northwind Labs.
+SYSTEM_PROMPT = """You are Akram, the internal employee support assistant for Northwind Labs.
 You help employees find colleagues, check leave balances, and understand HR policies.
 
 Rules:
